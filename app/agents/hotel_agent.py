@@ -6,15 +6,135 @@ from pydantic import BaseModel, ValidationError
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from app.tools.hotel_search import search_hotels
+from app.tools.hotel_search import search_rooms
 
-# Gemini LLM
+#Gemini LLM
 llm = ChatGoogleGenerativeAI(
     model="",
     temparature=0.2
 )
 
 class HotelSearchSchema(BaseModel):
-    origin: str
-    destination: str
+    city: str
+    hotel: str
+
+# System Prompt
+SYSTEM_PROMPT = """
+You are a hotel search agent
+
+Your responsibilities:
+- Extract hotel search details
+- Validate user travel requests
+- Search for hotels
+- Recommend the best available option
+
+Rules:
+- Return only valid JSON
+- Do not include markdown
+"""
+
+# Flight Agent
+class HotelAgent:
+    async def run(self, user_prompt: str) -> Dict[str, Any]:
+        extracted_data = await self.extract_trip_details(user_prompt)
+
+        if extracted_data.get("status") == "error":
+            return extracted_data
+        
+        validation_error = self.validate_inputs(extracted_data)
+        if validation_error:
+            return {
+                "status": "Missing Information",
+                "message": validation_error
+            }
+        
+        hotels = await search_rooms(
+            origin=extracted_data["city"],
+            destination=extracted_data["hotel"],
+        )
+        if not hotels:
+            return {
+                "status": "No space found",
+                "message": (
+                    f"No flights found from "
+                    f"{extracted_data['city']} to "
+                    f"{extracted_data['hotel']}."
+                )
+            }
+        
+        sorted_hotels = sorted(hotels, key=lambda x: x.get("price", float("inf")))
+        cheapest_hotel = sorted_hotels[0]
+
+        return {
+            "status": "Success",
+            "search_parameters": extracted_data,
+            "recommend_hotel_room": cheapest_hotel,
+            "all_hotels": sorted_hotels
+        }
     
+    async def extract_trip_details(self, user_prompt: str) -> dict[str, Any]:
+        # Use gemini to extract trip details
+        prompt = f"""
+        Extract hotel search information from the user request.
+        
+        Return only valid JSON.
+        Required JSON format:
+        {{
+            "destination": "City",
+            "room": "Hotel"
+        }}
+        User request:
+        {user_prompt}
+        """
+        try:
+            response = await llm.ainvoke([
+                SystemMessage(content=SYSTEM_PROMPT),
+                HumanMessage(content=user_prompt)
+            ])
+            raw_text = response.content.strip()
+
+            # remove anything to do w markdown
+            raw_text = raw_text.replace("```json", "")
+            raw_text = raw_text.replace("```", "")
+
+            parsed_data = json.loads(raw_text)
+
+            validated_data = HotelSearchSchema(**parsed_data)
+
+            return validated_data.model_dump()
+        
+        except json.JSONDecodeError:
+            return {
+                "status": "error",
+                "message": "Failed to parse LLM response."
+            }
+        
+        except ValidationError as e:
+            return {
+                "status": "error",
+                "message": str(e)
+            }
+        
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"Hotel agent error: {str(e)}"
+            }
+        
+    def validate_inputs(self, data: Dict[str, Any]) -> str | None:
+        # validates extracted flight data
+        required_fiels = [""]
+
+        for field in required_fiels:
+            if not data.get(field):
+                return f"Missing field: {field}"
+            
+        try:
+            datetime.strptime(data["checkin_date"], "%Y-%m-%d")
+
+        except ValueError:
+            return (
+                "Invalid checkin date format. "
+                "Use YYYY-MM-DD."
+                )
+        return None
