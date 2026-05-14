@@ -77,4 +77,58 @@ class AirbnbAgent:
             "": "",
             "": "",
             "": "",
-        }}"""
+        }}
+        User request:
+        {user_prompt}
+        """
+        try:
+            response = await llm.ainvoke([
+                SystemMessage(content=SYSTEM_PROMPT),
+                HumanMessage(content=user_prompt)
+            ])
+            raw_text = response.content.strip()
+
+            # remove anything to do with markdown
+            raw_text = raw_text.replace("```json", "")
+            raw_text = raw_text.replace("```", "")
+
+            parsed_data = json.loads(raw_text)
+
+            validated_data = BnbSearchSchema(**parsed_data)
+            return validated_data.model_dump()
+        
+        except json.JSONDecodeError:
+            return {
+                "status": "error",
+                "message": "Failed to parse LLM response"
+            }
+        except ValidationError as e:
+            return {
+                "status": "error",
+                "message": str(e)
+            }
+        
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"Flight agent error: {str(e)}"
+            }
+        
+    def validate_inputs(self, data:Dict[str, Any]) -> str | None:
+        required_fields = [""]
+
+        for field in required_fields:
+            if not data.get(field):
+                return f"Missing field: {field}"
+            
+        try:
+            datetime.strptime(data["checkin_date"], "%Y-%m-%d")
+
+        except ValueError:
+            return (
+                "Invalid checkin date format"
+                "USE YYYY-MM-DD."
+            )
+        
+        return None
+    
