@@ -1,3 +1,5 @@
+import asyncio
+
 from app.agents.flight_agent import FlightAgent
 from app.agents.hotel_agent import HotelAgent
 from app.agents.activity_agent import ActivityAgent
@@ -8,62 +10,65 @@ from app.orchestrator.state_manager import WorkflowState
 
 
 class TripWorkflow:
-
     def __init__(self):
-
         self.flight_agent = FlightAgent()
         self.hotel_agent = HotelAgent()
         self.activity_agent = ActivityAgent()
         self.budget_agent = BudgetAgent()
         self.planner_agent = PlannerAgent()
 
-        self.state = WorkflowState()
+    async def generate_trip(self, preferences: dict):
+        state = WorkflowState()
+        try:
+            state.update_step("budgeting")
+            budget_split = self.budget_agent.allocate_budget(
+                preferences["budget"]
+            )
 
-    async def generate_trip(
-        self,
-        preferences: dict
-    ):
+            state.update_step("parallel_search")
 
-        self.state.update_step("budgeting")
+            flights_task = self.flight_agent.find_best_flights(
+                origin=preferences["origin"],
+                destination=preferences["destination"],
+                departure_date=preferences["departure_date"]
+            )
 
-        budget_split = self.budget_agent.allocate_budget(
-            preferences["budget"]
-        )
+            hotels_task = self.hotel_agent.recommend_hotels(
+                city=preferences["destination"],
+                budget=budget_split["hotel"]
+            )
 
-        self.state.update_step("searching_flights")
+            activities_task = self.activity_agent.find_activities(
+                city=preferences["destination"],
+                interests=preferences["interests"]
+            )
 
-        flights = await self.flight_agent.find_best_flights(
-            origin=preferences["origin"],
-            destination=preferences["destination"],
-            departure_date=preferences["departure_date"]
-        )
+            flights, hotels, activities = await asyncio.gather(
+                flights_task,
+                hotels_task,
+                activities_task
+            )
+            state.update_step("building_itinerary")
 
-        self.state.update_step("searching_hotels")
+            trip_plan = await self.planner_agent.generate_itinerary(
+                destination=preferences["destination"],
+                flights=flights,
+                hotels=hotels,
+                activities=activities,
+                budget=preferences["budget"]
+            )
+            state.update_step("completed")
 
-        hotels = await self.hotel_agent.recommend_hotels(
-            city=preferences["destination"],
-            budget=budget_split["hotel"]
-        )
+            return {
+                "status": "success",
+                "trip": trip_plan,
+                "workflow_state": state.get_state()
+            }
 
-        self.state.update_step("searching_activities")
-
-        activities = await self.activity_agent.find_activities(
-            city=preferences["destination"],
-            interests=preferences["interests"]
-        )
-
-        self.state.update_step("building_itinerary")
-
-        trip_plan = self.planner_agent.generate_itinerary(
-            destination=preferences["destination"],
-            flights=flights,
-            hotels=hotels,
-            activities=activities
-        )
-
-        self.state.update_step("completed")
-
-        return {
-            "trip": trip_plan,
-            "workflow_state": self.state.get_state()
-        }
+        except Exception as e:
+            state.add_error(str(e))
+            return {
+                "status": "error",
+                "message": str(e),
+                "workflow_state": state.get_state()
+            }

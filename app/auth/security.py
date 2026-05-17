@@ -1,7 +1,8 @@
 from google.oauth2 import id_token
 from google.auth.transport import requests
+import os
 
-GOOGLE_CLIENT_ID = "thegoogleclientid"
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
 # Verifies an ID token issued by Google's OAuth2.0 authorization server
 def verify_google_token(token: str):
