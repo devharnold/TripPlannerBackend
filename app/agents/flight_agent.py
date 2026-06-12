@@ -17,7 +17,7 @@ llm = ChatGoogleGenerativeAI(
 class FlightSearchSchema(BaseModel):
     origin: str
     destination: str
-    depature_date: str
+    depature_date: datetime
 
 # System Prompt
 SYSTEM_PROMPT = """

@@ -6,13 +6,18 @@ from pydantic import BaseModel, ValidationError
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from app.tools.flight_search import search_flights
+from app.tools.bnb_tool import search_bnbs
 
 #Gemini LLM
 llm = ChatGoogleGenerativeAI(
     model="",
     temparature=0.2
 )
+
+class BnbSearchSchema(BaseModel):
+    location: str
+    beds: int
+    checkin_date: datetime
 
 SYSTEM_PROMPT = """
 You are an Airbnb Search Agent
@@ -44,7 +49,7 @@ class AirbnbAgent:
                 "message": validation_error
             }
         
-        bnbs = await search_bnb(
+        bnbs = await search_bnbs(
 
         )
         if not bnbs:
@@ -53,7 +58,7 @@ class AirbnbAgent:
                 "message": {
                     f"No bnbs found from "
                     f"{extracted_data['datetime']}"
-                    f"{extracted_data['city']}"
+                    f"{extracted_data['location']}"
                 }
             }
         sorted_bnbs = sorted(bnbs, key=lambda x: x.get("location", "price", float("inf")))
@@ -74,9 +79,9 @@ class AirbnbAgent:
         Return only valid JSON.
         Required JSON format:
         {{
-            "": "",
-            "": "",
-            "": "",
+            "location": "location",
+            "beds": "beds",
+            "checkin_date": "checkin_date",
         }}
         User request:
         {user_prompt}
@@ -111,7 +116,7 @@ class AirbnbAgent:
         except Exception as e:
             return {
                 "status": "error",
-                "message": f"Flight agent error: {str(e)}"
+                "message": f"Bnb agent error: {str(e)}"
             }
         
     def validate_inputs(self, data:Dict[str, Any]) -> str | None:
@@ -131,4 +136,3 @@ class AirbnbAgent:
             )
         
         return None
-    
