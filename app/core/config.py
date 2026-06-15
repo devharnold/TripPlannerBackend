@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     RATE_LIMIT: int = 1  # Requests per minute
 
     # Google For reCAPTCHA
-    GOOGLE_CLIENT_ID: str | None = None
+    OAUTH_CLIENT_ID: str | None = None
 
     # Resend
     RESEND_API_KEY: str | None = None
