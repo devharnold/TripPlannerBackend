@@ -6,7 +6,8 @@ from pydantic import BaseModel, ValidationError
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from app.tools.hotel_search import search_rooms
+from app.tools.bnb_search import search_hotels
+from app.models import HotelSearchSchema
 
 #Gemini LLM
 llm = ChatGoogleGenerativeAI(
@@ -14,26 +15,22 @@ llm = ChatGoogleGenerativeAI(
     temparature=0.2
 )
 
-class HotelSearchSchema(BaseModel):
-    city: str
-    hotel: str
-
-# System Prompt
 SYSTEM_PROMPT = """
-You are a hotel search agent
+You are an Hotel Search Agent
 
-Your responsibilities:
-- Extract hotel search details
+Your responsibilities
+- Extract Hotel search details
 - Validate user travel requests
-- Search for hotels
+- Search for available rooms
 - Recommend the best available option
 
 Rules:
 - Return only valid JSON
-- Do not include markdown
+- Use YYYY-MM-DD for dates
+- Dont include markdown
 """
 
-# Flight Agent
+# Airbnb Agent
 class HotelAgent:
     async def run(self, user_prompt: str) -> Dict[str, Any]:
         extracted_data = await self.extract_trip_details(user_prompt)
@@ -48,52 +45,56 @@ class HotelAgent:
                 "message": validation_error
             }
         
-        hotels = await search_rooms(
-            origin=extracted_data["city"],
-            destination=extracted_data["hotel"],
+        hotels = await search_hotels(
+            city=extracted_data["city"],
+            hotel_company=extracted_data["hotel_company"],
+            beds=extracted_data["beds"],
+            price=extracted_data["price"],
+            checkin_date=extracted_data["checkin_date"]
         )
         if not hotels:
             return {
-                "status": "No space found",
-                "message": (
-                    f"No flights found from "
-                    f"{extracted_data['city']} to "
-                    f"{extracted_data['hotel']}."
-                )
+                "status": "No hotels found for that date",
+                "message": {
+                    f"No hotel rooms found from "
+                    f"{extracted_data['datetime']}"
+                    f"{extracted_data['city']}"
+                }
             }
-        
-        sorted_hotels = sorted(hotels, key=lambda x: x.get("price", float("inf")))
+        sorted_hotels = sorted(hotels, key=lambda x: x.get("location", "company", "price", float("inf")))
         cheapest_hotel = sorted_hotels[0]
 
         return {
             "status": "Success",
             "search_parameters": extracted_data,
-            "recommend_hotel_room": cheapest_hotel,
+            "recommend_hotel_option": cheapest_hotel,
             "all_hotels": sorted_hotels
         }
     
-    async def extract_trip_details(self, user_prompt: str) -> dict[str, Any]:
-        # Use gemini to extract trip details
+    async def extract_trip_details(self, user_prompt: str) -> Dict[str, Any]:
+        # Use gemini to extract the details
         prompt = f"""
         Extract hotel search information from the user request.
         
         Return only valid JSON.
         Required JSON format:
         {{
-            "destination": "City",
-            "room": "Hotel"
+            "location": "city",
+            "accommodation": "beds",
+            "charges": "price",
+            "checkin_date": "YYYY-MM-DD"
         }}
         User request:
         {user_prompt}
         """
         try:
-            response = await llm.ainvoke([
+            response = await llm.invoke([
                 SystemMessage(content=SYSTEM_PROMPT),
                 HumanMessage(content=user_prompt)
             ])
             raw_text = response.content.strip()
 
-            # remove anything to do w markdown
+            # remove anything to do with markdown
             raw_text = raw_text.replace("```json", "")
             raw_text = raw_text.replace("```", "")
 
@@ -102,7 +103,7 @@ class HotelAgent:
             validated_data = HotelSearchSchema(**parsed_data)
 
             return validated_data.model_dump()
-        
+
         except json.JSONDecodeError:
             return {
                 "status": "error",
@@ -121,11 +122,12 @@ class HotelAgent:
                 "message": f"Hotel agent error: {str(e)}"
             }
         
-    def validate_inputs(self, data: Dict[str, Any]) -> str | None:
-        # validates extracted flight data
-        required_fiels = [""]
 
-        for field in required_fiels:
+    def validate_inputs(self, data: Dict[str, Any]) -> str | None:
+        # validates extracted bnb data
+        required_fields = ["location", "accommodation", "charges", "checkin_date"]
+
+        for field in required_fields:
             if not data.get(field):
                 return f"Missing field: {field}"
             
@@ -136,5 +138,5 @@ class HotelAgent:
             return (
                 "Invalid checkin date format. "
                 "Use YYYY-MM-DD."
-                )
+            )
         return None

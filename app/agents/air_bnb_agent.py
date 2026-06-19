@@ -6,7 +6,8 @@ from pydantic import BaseModel, ValidationError
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from app.tools.bnb_tool import search_bnbs
+from app.tools.bnb_search import search_bnbs
+from app.models import BnbSearchSchema
 
 #Gemini LLM
 llm = ChatGoogleGenerativeAI(
@@ -50,7 +51,10 @@ class AirbnbAgent:
             }
         
         bnbs = await search_bnbs(
-
+            city=extracted_data["city"],
+            beds=extracted_data["beds"],
+            price=extracted_data["price"],
+            checkin_date=extracted_data["checkin_date"]
         )
         if not bnbs:
             return {
@@ -79,15 +83,16 @@ class AirbnbAgent:
         Return only valid JSON.
         Required JSON format:
         {{
-            "location": "location",
-            "beds": "beds",
-            "checkin_date": "checkin_date",
+            "location": "city",
+            "accommodation": "beds",
+            "charges": "price",
+            "checkin_date": "YYYY-MM-DD"
         }}
         User request:
         {user_prompt}
         """
         try:
-            response = await llm.ainvoke([
+            response = await llm.invoke([
                 SystemMessage(content=SYSTEM_PROMPT),
                 HumanMessage(content=user_prompt)
             ])
@@ -100,13 +105,15 @@ class AirbnbAgent:
             parsed_data = json.loads(raw_text)
 
             validated_data = BnbSearchSchema(**parsed_data)
+
             return validated_data.model_dump()
-        
+
         except json.JSONDecodeError:
             return {
                 "status": "error",
-                "message": "Failed to parse LLM response"
+                "message": "Failed to parse LLM response."
             }
+        
         except ValidationError as e:
             return {
                 "status": "error",
@@ -116,11 +123,13 @@ class AirbnbAgent:
         except Exception as e:
             return {
                 "status": "error",
-                "message": f"Bnb agent error: {str(e)}"
+                "message": f"BNB agent error: {str(e)}"
             }
         
-    def validate_inputs(self, data:Dict[str, Any]) -> str | None:
-        required_fields = [""]
+
+    def validate_inputs(self, data: Dict[str, Any]) -> str | None:
+        # validates extracted bnb data
+        required_fields = ["location", "accommodation", "charges", "checkin_date"]
 
         for field in required_fields:
             if not data.get(field):
@@ -131,8 +140,7 @@ class AirbnbAgent:
 
         except ValueError:
             return (
-                "Invalid checkin date format"
-                "USE YYYY-MM-DD."
+                "Invalid checkin date format. "
+                "Use YYYY-MM-DD."
             )
-        
         return None

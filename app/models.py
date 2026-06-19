@@ -31,6 +31,19 @@ class Money(BaseModel):
     amount: Decimal
     currency: Currency
 
+# Flight Search Schema
+class FlightSearchSchema(BaseModel):
+    origin: str
+    destination: str
+    depature_date: str
+
+# Bnb Search Schema
+class BnbSearchSchema(BaseModel):
+    city: str
+    beds: str
+    price: str
+    checkin_date: str
+
 
 # User Personalization
 class UserPreferences(BaseModel):

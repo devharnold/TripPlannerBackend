@@ -1,16 +1,16 @@
-import httpx
 from typing import List, Dict
-from datetime import datetime
-import os
+import httpx
 
-#TODO: Add Hotel Provider API URL
-HOTEL_API_URL=os.getenv("HOTEL_API_URL")
+#TODO: Add the flight api url
+HOTEL_API_URL = ""
 
-async def locate_hotel_rooms(city: str, hotel: str, prefered_checkin_date: datetime) -> List[Dict]:
+async def search_hotels(city: str, hotel_company: str, beds: str, price: str, checkin_date: str) -> List[Dict]:
     params = {
         "city": city,
-        "hotel": hotel,
-        "prefered_checkin_date": prefered_checkin_date
+        "hotel_company": hotel_company,
+        "beds": beds,
+        "price": price,
+        "checkin_date": checkin_date
     }
 
     try:
@@ -22,18 +22,19 @@ async def locate_hotel_rooms(city: str, hotel: str, prefered_checkin_date: datet
             response.raise_for_status()
             data = response.json()
 
-            hotel_rooms = []
+            hotels = []
             for hotel in data.get("results", []):
-                hotel_rooms.append({
-                    "hotel_name": hotel.get("hotel_name"),
-                    "hotel_location": hotel.get("hotel_location"),
-                    "price_per_night": hotel.get("price_per_night"),
-                    "amenities": hotel.get("amenities")
+                hotels.append({
+                    "city": hotel.get("city"),
+                    "hotel_company": hotel.get("hotel_company"),
+                    "beds": hotel.get("beds"),
+                    "price": hotel.get("price"),
+                    "checkin_date": hotel.get("checkin_date")
                 })
 
-            return hotel_rooms
+            return hotels
         
     except httpx.HTTPError as e:
-        print(f"Hotel Search API Error: {e}")
+        print(f"Hotel API error: {e}")
 
         return []
