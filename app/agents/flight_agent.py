@@ -7,17 +7,13 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from app.tools.flight_search import search_flights
+from app.models import FlightSearchSchema
 
 #Gemini LLM
 llm = ChatGoogleGenerativeAI(
     model="",
     temparature=0.2
 )
-
-class FlightSearchSchema(BaseModel):
-    origin: str
-    destination: str
-    depature_date: str
 
 # System Prompt
 SYSTEM_PROMPT = """
