@@ -15,6 +15,11 @@ llm = ChatGoogleGenerativeAI(
     temparature=0.2
 )
 
+class BnbSearchSchema(BaseModel):
+    location: str
+    beds: int
+    checkin_date: datetime
+
 SYSTEM_PROMPT = """
 You are an Airbnb Search Agent
 
@@ -57,7 +62,7 @@ class AirbnbAgent:
                 "message": {
                     f"No bnbs found from "
                     f"{extracted_data['datetime']}"
-                    f"{extracted_data['city']}"
+                    f"{extracted_data['location']}"
                 }
             }
         sorted_bnbs = sorted(bnbs, key=lambda x: x.get("location", "price", float("inf")))

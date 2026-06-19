@@ -6,6 +6,10 @@ from typing import List, Optional, Literal
 from decimal import Decimal
 from enum import Enum
 
+# Google AUTH Request
+class GoogleAuthRequest(BaseModel):
+    token: str
+
 #Shared across services
 class Currency(str, Enum):
     USD = "USD"
@@ -64,6 +68,7 @@ class TripRequest(BaseModel):
     budget: float
     travelers: int = Field(gt=0)
     preferences: Optional[UserPreferences] = None # depends on the users preferences
+    additional_prompt: Optional[str] = None
 
 # Recommendation Engine
 class Activity(BaseModel):

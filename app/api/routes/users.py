@@ -1,12 +1,10 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks
-from pydantic import BaseModel
 from app.auth.security import verify_google_token
 from app.auth.recaptcha import verify_captcha
+from models import GoogleAuthRequest
 
 router = APIRouter()
 
-class GoogleAuthRequest(BaseModel):
-    token: str
 
 @router.post("/signup")
 async def signup(payload: dict):
