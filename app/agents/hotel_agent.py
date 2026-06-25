@@ -6,13 +6,16 @@ from pydantic import BaseModel, ValidationError
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from app.tools.bnb_search import search_hotels
+from app.tools.hotel_search import search_hotels
 from app.models import HotelSearchSchema
+
+from app.core.config import settings
 
 #Gemini LLM
 llm = ChatGoogleGenerativeAI(
-    model="",
-    temparature=0.2
+    model="gemini-2.5-pro",
+    temperature=0.2,
+    google_api_key=settings.GEMINI_API_KEY
 )
 
 SYSTEM_PROMPT = """

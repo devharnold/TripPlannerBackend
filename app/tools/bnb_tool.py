@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 
 #TODO: Add Hotel Provider API URL
-AIR_BNB_URL=os.getenv("HOTEL_API_URL")
+AIR_BNB_URL=os.getenv("BNB_API_URL")
 
 async def search_bnbs(location: str, beds: int, checkin_date: datetime) -> List[Dict]:
     params = {

@@ -9,10 +9,13 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from app.tools.flight_search import search_flights
 from app.models import FlightSearchSchema
 
+from app.core.config import settings
+
 #Gemini LLM
 llm = ChatGoogleGenerativeAI(
-    model="",
-    temparature=0.2
+    model="gemini-2.5-pro",
+    temperature=0.2,
+    google_api_key=settings.GEMINI_API_KEY
 )
 
 # System Prompt
@@ -61,7 +64,7 @@ class FlightAgent:
                 )
             }
         
-        sorted_flights = sorted(flights, key=lambda x: x.get("price", float("inf")))
+        sorted_flights = sorted(flights, key=lambda flight: flight.get("price", float("inf")))
         cheapest_flight = sorted_flights[0]
 
         return {

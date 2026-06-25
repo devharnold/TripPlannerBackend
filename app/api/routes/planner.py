@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from models import TripRequest
+from app.models import TripRequest
 
 from app.orchestrator.workflow import TripWorkflow
 from app.memory.chat_memory import ChatMemory
