@@ -2,8 +2,7 @@ import asyncio
 
 from app.agents.flight_agent import FlightAgent
 from app.agents.hotel_agent import HotelAgent
-from app.agents.activity_agent import ActivityAgent
-from app.agents.budget_agent import BudgetAgent
+from app.agents.air_bnb_agent import AirbnbAgent
 from app.agents.planner_agent import PlannerAgent
 
 from app.orchestrator.state_manager import WorkflowState
@@ -13,8 +12,7 @@ class TripWorkflow:
     def __init__(self):
         self.flight_agent = FlightAgent()
         self.hotel_agent = HotelAgent()
-        self.activity_agent = ActivityAgent()
-        self.budget_agent = BudgetAgent()
+        self.airbnb_agent = AirbnbAgent()
         self.planner_agent = PlannerAgent()
 
     async def generate_trip(self, preferences: dict):
@@ -38,15 +36,15 @@ class TripWorkflow:
                 budget=budget_split["hotel"]
             )
 
-            activities_task = self.activity_agent.find_activities(
-                city=preferences["destination"],
-                interests=preferences["interests"]
+            airbnbs_task = self.airbnb_agent.recommend_bnbs(
+                city=preferences["city"],
+                budget=budget_split["bnb"]
             )
 
-            flights, hotels, activities = await asyncio.gather(
+            flights, hotels, airbnbs = await asyncio.gather(
                 flights_task,
                 hotels_task,
-                activities_task
+                airbnbs_task
             )
             state.update_step("building_itinerary")
 
@@ -54,7 +52,7 @@ class TripWorkflow:
                 destination=preferences["destination"],
                 flights=flights,
                 hotels=hotels,
-                activities=activities,
+                airbnbs=airbnbs,
                 budget=preferences["budget"]
             )
             state.update_step("completed")

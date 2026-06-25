@@ -3,12 +3,12 @@ from sentence_transformers import SentenceTransformer
 
 # Embed Model
 embedding_model = SentenceTransformer(
-    ""
+    "all-MiniLM-L6-v2"
 )
 
 #Persistent Chroma Client
 client = chromadb.PersistentClient(path="./chromadb")
-collection = client.get_or_create_collection(name="trip memory")
+collection = client.get_or_create_collection(name="trip_memory")
 
 class VectorStore:
     @staticmethod

@@ -37,6 +37,14 @@ class FlightSearchSchema(BaseModel):
     destination: str
     depature_date: str
 
+class HotelSearchSchema(BaseModel):
+    city: str
+    hotel_company: str
+    beds: str
+    price: str
+    checkin_date: str
+
+
 # Bnb Search Schema
 class BnbSearchSchema(BaseModel):
     city: str

@@ -6,6 +6,8 @@ import os
 FLIGHT_API_URL = os.getenv("FLIGHT_API_URL")
 
 async def search_flights(origin: str, destination: str, departure_date: str) -> List[Dict]:
+    if not FLIGHT_API_URL:
+        raise ValueError("Flight API URL not configured!")
     params = {
         "origin": origin,
         "destination": destination,
@@ -35,6 +37,6 @@ async def search_flights(origin: str, destination: str, departure_date: str) -> 
             return flights
         
     except httpx.HTTPError as e:
-        print(f"Flight API error: {e}")
+        print(f"Flight provider unavailable: {str(e)}")
 
         return []
